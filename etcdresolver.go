@@ -2,21 +2,19 @@
  * (C) Copyright 2014 Nuxeo SA (http://nuxeo.com/) and contributors.
  *
  * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the GNU Lesser General Public License
- * (LGPL) version 2.1 which accompanies this distribution, and is available at
- * http://www.gnu.org/licenses/lgpl-2.1.html
+ * are made available under the terms of the Apache License Version 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.apache.org/licenses/
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
+ * See the Apache Licence for more details.
  *
  * Contributors:
  *     nuxeo.io Team
  */
 
-
 package main
+
+import "time"
 
 const (
 	SERVICE_DOMAINTYTPE = "service"
@@ -29,7 +27,8 @@ type Service struct {
 	nodeKey    string
 	domain     string
 	name       string
-	lastAccess string
+	status   *Status
+	lastAccess time.Time
 }
 
 type EtcdResolver struct {

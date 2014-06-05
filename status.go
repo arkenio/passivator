@@ -14,20 +14,18 @@
 
 package main
 
-import "github.com/golang/glog"
-
 const (
-	progName = "Passivator"
+STARTING_STATUS      = "starting"
+STARTED_STATUS       = "started"
+STOPPING_STATUS      = "stopping"
+STOPPED_STATUS       = "stopped"
+ERROR_STATUS         = "error"
+NA_STATUS            = "n/a"
+PASSIVATED_STATUS    = "passivated"
 )
 
-func main() {
-	glog.Infof("%s starting", progName)
-
-	config := parseConfig()
-
-	resolver, err := NewEtcdResolver(config)
-	if err == nil {
-		resolver.init()
-	}
+type Status struct {
+	alive    string
+	current  string
+	expected string
 }
-

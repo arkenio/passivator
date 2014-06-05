@@ -2,14 +2,11 @@
  * (C) Copyright 2014 Nuxeo SA (http://nuxeo.com/) and contributors.
  *
  * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the GNU Lesser General Public License
- * (LGPL) version 2.1 which accompanies this distribution, and is available at
- * http://www.gnu.org/licenses/lgpl-2.1.html
+ * are made available under the terms of the Apache License Version 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.apache.org/licenses/
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
+ * See the Apache Licence for more details.
  *
  * Contributors:
  *     nuxeo.io Team
@@ -22,8 +19,6 @@ import (
 	"time"
 	"github.com/golang/glog"
 	"os/exec"
-	"regexp"
-	"strings"
 )
 
 const INTERVAL_PERIOD time.Duration = 5 * time.Minute
@@ -61,33 +56,20 @@ func (etcdcron *EtcdCron) start() {
 	}
 }
 
-func (etcdcron *EtcdCron) getServiceForNode(node *etcd.Node) string {
-	r := regexp.MustCompile(etcdcron.config.servicePrefix + "/(.*)(/.*)*")
-	return strings.Split(r.FindStringSubmatch(node.Key)[1], "/")[0]
-}
-
-func (etcdcron *EtcdCron) getServiceIndexForNode(node *etcd.Node) string {
-	r := regexp.MustCompile(etcdcron.config.servicePrefix + "/(.*)(/.*)*")
-	return strings.Split(r.FindStringSubmatch(node.Key)[1], "/")[1]
-}
-
-func (etcdcron *EtcdCron) RemoveEnv(serviceName string) {
-	delete(etcdcron.services, serviceName)
-}
-
 func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
-	serviceName := etcdcron.getServiceForNode(node)
+	serviceName := etcdcron.config.getServiceForNode(node, etcdcron.config)
 
 	// Get service's root node instead of changed node.
 	serviceNode, _ := etcdcron.client.Get(etcdcron.config.servicePrefix+"/"+serviceName, true, true)
 
 	for _, indexNode := range serviceNode.Node.Nodes {
 
-		serviceIndex := etcdcron.getServiceIndexForNode(indexNode)
+		serviceIndex := etcdcron.config.getServiceIndexForNode(indexNode, etcdcron.config)
 		serviceKey := etcdcron.config.servicePrefix + "/" + serviceName + "/" + serviceIndex
 		lastAccessKey := serviceKey + "/lastAccess"
+		statusKey := serviceKey + "/status"
 
-		response, err := etcdcron.client.Get(lastAccessKey, false, false)
+		response, err := etcdcron.client.Get(serviceKey, true, true)
 
 		if err == nil {
 
@@ -100,22 +82,46 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 			service.nodeKey = serviceKey
 
 			if action == "delete" || action == "expire" {
-				etcdcron.RemoveEnv(serviceName)
+				etcdcron.config.RemoveEnv(serviceName, etcdcron.services)
 				return
 			}
 
-			lastAccess := response.Node.Value
-
-			lastAccessTime, err := time.Parse(lastAccess, lastAccess)
-
-			if err != nil {
-				glog.Errorf("%s", err)
-				break
+			for _, node := range response.Node.Nodes {
+				switch node.Key {
+				case statusKey:
+					service.status = &Status{}
+				for _, subNode := range node.Nodes {
+					switch subNode.Key {
+					case statusKey + "/alive":
+						service.status.alive = subNode.Value
+					case statusKey + "/current":
+						service.status.current = subNode.Value
+					case statusKey + "/expected":
+						service.status.expected = subNode.Value
+					}
+				}
+				case lastAccessKey:
+					lastAccess := response.Node.Value
+					lastAccessTime, err := time.Parse(lastAccess, lastAccess)
+					if err != nil {
+						glog.Errorf("Error parsing last access date with service %s: %s", serviceName, err)
+						break
+					}
+					service.lastAccess = lastAccessTime
+				}
 			}
 
-			if time.Now().After(lastAccessTime.Add(LIMIT_TIME)) {
+			if time.Now().After(service.lastAccess.Add(LIMIT_TIME)) && service.status.current == STARTED_STATUS {
 				actualService := etcdcron.services[serviceName].Get(service.index)
 				if actualService != nil {
+					_, error := etcdcron.client.Set(statusKey+"/current", PASSIVATED_STATUS, 0)
+					if error == nil {
+						glog.Errorf("Setting status current to passivated has failed for Service "+serviceName+": %s", err)
+					}
+					response, error := etcdcron.client.Set(statusKey+"/expected", PASSIVATED_STATUS, 0)
+					if error == nil && response == nil {
+						glog.Errorf("Setting status expected to passivated has failed for Service "+serviceName+": %s", err)
+					}
 					_, err := exec.Command("fleetctl", "stop", serviceName).Output()
 					if err != nil {
 						glog.Errorf("Service "+serviceName+" passivation has failed: %s", err)

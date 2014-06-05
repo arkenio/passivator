@@ -2,19 +2,15 @@
  * (C) Copyright 2014 Nuxeo SA (http://nuxeo.com/) and contributors.
  *
  * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the GNU Lesser General Public License
- * (LGPL) version 2.1 which accompanies this distribution, and is available at
- * http://www.gnu.org/licenses/lgpl-2.1.html
+ * are made available under the terms of the Apache License Version 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.apache.org/licenses/
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
+ * See the Apache Licence for more details.
  *
  * Contributors:
  *     nuxeo.io Team
  */
-
 
 package main
 
@@ -23,11 +19,15 @@ import (
 	"flag"
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/golang/glog"
+	"strings"
+	"regexp"
 )
 
 type Config struct {
-	servicePrefix string
-	etcdAddress   string
+	servicePrefix        string
+	etcdAddress          string
+	cronDuration         string
+	passiveLimitDuration string
 	client        *etcd.Client
 }
 
@@ -41,15 +41,34 @@ func (c *Config) getEtcdClient() (*etcd.Client, error) {
 	return c.client, nil
 }
 
+func (c *Config) getServiceForNode(node *etcd.Node, config *Config) string {
+	r := regexp.MustCompile(config.servicePrefix + "/(.*)(/.*)*")
+	return strings.Split(r.FindStringSubmatch(node.Key)[1], "/")[0]
+}
+
+func (c *Config) getServiceIndexForNode(node *etcd.Node, config *Config) string {
+	r := regexp.MustCompile(config.servicePrefix + "/(.*)(/.*)*")
+	return strings.Split(r.FindStringSubmatch(node.Key)[1], "/")[1]
+}
+
+func (c *Config) RemoveEnv(serviceName string, services map[string]*ServiceCluster) {
+	delete(services, serviceName)
+}
+
 func parseConfig() *Config {
 	config := &Config{}
 	flag.StringVar(&config.servicePrefix, "serviceDir", "/services", "etcd prefix to get services")
 	flag.StringVar(&config.etcdAddress, "etcdAddress", "http://127.0.0.1:4001/", "etcd client host")
+	flag.StringVar(&config.cronDuration, "cronDuration", "5", "Passivation cron checking duration ")
+	flag.StringVar(&config.passiveLimitDuration, "passiveLimitDuration", "12", "Limit duration of passivation")
 	flag.Parse()
 
 	glog.Infof("Dumping Configuration")
 	glog.Infof("  servicesPrefix : %s", config.servicePrefix)
 	glog.Infof("  etcdAddress : %s", config.etcdAddress)
+	glog.Infof("  Passivation cron duration: %s", config.cronDuration)
+	glog.Infof("  Limit duration of passivation : %s", config.passiveLimitDuration)
 
 	return config
 }
+

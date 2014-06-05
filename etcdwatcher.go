@@ -2,14 +2,11 @@
  * (C) Copyright 2014 Nuxeo SA (http://nuxeo.com/) and contributors.
  *
  * All rights reserved. This program and the accompanying materials
- * are made available under the terms of the GNU Lesser General Public License
- * (LGPL) version 2.1 which accompanies this distribution, and is available at
- * http://www.gnu.org/licenses/lgpl-2.1.html
+ * are made available under the terms of the Apache License Version 2.0
+ * which accompanies this distribution, and is available at
+ * http://www.apache.org/licenses/
  *
- * This library is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU
- * Lesser General Public License for more details.
+ * See the Apache Licence for more details.
  *
  * Contributors:
  *     nuxeo.io Team
@@ -20,8 +17,6 @@ package main
 import (
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/golang/glog"
-	"regexp"
-	"strings"
 	"time"
 	"os/exec"
 )
@@ -78,33 +73,20 @@ func (w *watcher) watch(updateChannel chan *etcd.Response, registerFunc func(*et
 	}
 }
 
-func (w *watcher) getServiceForNode(node *etcd.Node) string {
-	r := regexp.MustCompile(w.config.servicePrefix + "/(.*)(/.*)*")
-	return strings.Split(r.FindStringSubmatch(node.Key)[1], "/")[0]
-}
-
-func (w *watcher) getServiceIndexForNode(node *etcd.Node) string {
-	r := regexp.MustCompile(w.config.servicePrefix + "/(.*)(/.*)*")
-	return strings.Split(r.FindStringSubmatch(node.Key)[1], "/")[1]
-}
-
-func (w *watcher) RemoveEnv(serviceName string) {
-	delete(w.services, serviceName)
-}
-
 func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
-	serviceName := w.getServiceForNode(node)
+	serviceName := w.config.getServiceForNode(node, w.config)
 
 	// Get service's root node instead of changed node.
 	serviceNode, _ := w.client.Get(w.config.servicePrefix+"/"+serviceName, true, true)
 
 	for _, indexNode := range serviceNode.Node.Nodes {
 
-		serviceIndex := w.getServiceIndexForNode(indexNode)
+		serviceIndex := w.config.getServiceIndexForNode(indexNode, w.config)
 		serviceKey := w.config.servicePrefix + "/" + serviceName + "/" + serviceIndex
 		lastAccessKey := serviceKey + "/lastAccess"
+		statusKey := serviceKey + "/status"
 
-		response, err := w.client.Get(lastAccessKey, false, false)
+		response, err := w.client.Get(serviceKey, true, true)
 
 		if err == nil {
 
@@ -117,22 +99,42 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 			service.nodeKey = serviceKey
 
 			if action == "delete" || action == "expire" {
-				w.RemoveEnv(serviceName)
+				w.config.RemoveEnv(serviceName, w.services)
 				return
 			}
 
-			lastAccess := response.Node.Value
-
-			lastAccessTime, err := time.Parse(lastAccess, lastAccess)
-
-			if err != nil {
-				glog.Errorf("%s", err)
-				break
+			for _, node := range response.Node.Nodes {
+				switch node.Key {
+				case statusKey:
+					service.status = &Status{}
+				for _, subNode := range node.Nodes {
+					switch subNode.Key {
+					case statusKey + "/alive":
+						service.status.alive = subNode.Value
+					case statusKey + "/current":
+						service.status.current = subNode.Value
+					case statusKey + "/expected":
+						service.status.expected = subNode.Value
+					}
+				}
+				case lastAccessKey:
+					lastAccess := response.Node.Value
+					lastAccessTime, err := time.Parse(lastAccess, lastAccess)
+					if err != nil {
+						glog.Errorf("Error parsing last access date with service %s: %s", serviceName, err)
+						break
+					}
+					service.lastAccess = lastAccessTime
+				}
 			}
 
-			if !time.Now().After(lastAccessTime.Add(LIMIT_TIME)) {
+			if !time.Now().After(service.lastAccess.Add(LIMIT_TIME)) && service.status.current == PASSIVATED_STATUS {
 				actualService := w.services[serviceName].Get(service.index)
 				if actualService != nil {
+					_, error := w.client.Set(statusKey+"/expected", STARTED_STATUS, 0)
+					if error == nil {
+						glog.Errorf("Setting expected status to started has failed for Service "+serviceName+": %s", err)
+					}
 					_, err := exec.Command("fleetctl", "start", serviceName).Output()
 					if err != nil {
 						glog.Errorf("Service "+serviceName+" restart has failed: %s", err)
