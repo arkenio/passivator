@@ -20,10 +20,10 @@ Configuration
 
 Several parameters allow to configure the way the passivator behaves :
 
- * `serviceDir` allows to select the prefix of the key where it watches for services
- * `etcdAddress` specifies the address of the `etcd` server
- * `cronDuration` specifies the lap duration in minutes to check services to passivate
- * `passiveLimitDuration` specifies the limit duration in hours when a service has to be passivated if no activity has been detected 
+ * `serviceDir` allows to select the prefix of the key where it watches for services (default value: "/services" )
+ * `etcdAddress` specifies the address of the `etcd` server (default value: "http://172.17.42.1:4001")
+ * `cronDuration` specifies the lap duration in minutes to check services to passivate (default value: "5")
+ * `passiveLimitDuration` specifies the limit duration in hours when a service has to be passivated if no activity has been detected (default value: "12")
  
 Example:
  
