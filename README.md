@@ -3,9 +3,17 @@
 Passivator
 ======
 
-The passivator process purpose is watching last access services dates and starting/stopping those depending on the duration. When an access is detected on passivated service, the passivator will re-starting it.
+The passivator process purpose is watching last access services dates submitted by [Gogeta](http://github.com/arkenio/gogeta)and starting/stopping those services depending on limit access duration (If no activity has been detected during 12 hours, service is passivated). The process will restart after first new activity detected.
 
 It is part of the nuxeo.io infrastructure.
+
+How it works
+-------------
+
+The passivator is:
+
+* watching etcd services entries to re-activate service when a user is trying to access it
+* executing a cron process to check every 5 minutes if some services need to be passivated after 12 hours without activity
 
 Configuration
 -------------
