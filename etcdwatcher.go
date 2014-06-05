@@ -23,9 +23,10 @@ import (
 	"regexp"
 	"strings"
 	"time"
-	"math"
 	"os/exec"
 )
+
+const LIMIT_TIME time.Duration = 12 * time.Hour
 
 // A watcher loads and watch the etcd hierarchy for services.
 type watcher struct {
@@ -74,7 +75,6 @@ func (w *watcher) watch(updateChannel chan *etcd.Response, registerFunc func(*et
 		if response != nil {
 			registerFunc(response.Node, response.Action)
 		}
-
 	}
 }
 
@@ -130,15 +130,15 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 				break
 			}
 
-			if math.Abs(float64(time.Now().Hour() - lastAccessTime.Hour())) < 12 {
+			if !time.Now().After(lastAccessTime.Add(LIMIT_TIME)) {
 				actualService := w.services[serviceName].Get(service.index)
 				if actualService != nil {
-					out, err := exec.Command("fleetctl start "+serviceName, "").Output()
+					_, err := exec.Command("fleetctl", "start", serviceName).Output()
 					if err != nil {
-						glog.Errorf("%s", err)
+						glog.Errorf("Service "+serviceName+" restart has failed: %s", err)
 						break
 					}
-					glog.Infof("Service %s passivated - command: %b", serviceName, out)
+					glog.Infof("Service %s restarted", serviceName)
 				}
 			}
 		}
