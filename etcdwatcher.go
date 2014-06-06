@@ -26,17 +26,16 @@ import (
 type watcher struct {
 	client   *etcd.Client
 	config   *Config
-	services map[string]*ServiceCluster
 }
 
 // Constructor for a new watcher
-func NewEtcdWatcher(config *Config, services map[string]*ServiceCluster) (*watcher, error) {
+func NewEtcdWatcher(config *Config) (*watcher, error) {
 	client, err := config.getEtcdClient()
 
 	if err != nil {
 		return nil, err
 	}
-	return &watcher{client, config, services}, nil
+	return &watcher{client, config}, nil
 }
 
 //Init services watcher
@@ -89,18 +88,9 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 
 		if err == nil {
 
-			if w.services[serviceName] == nil {
-				w.services[serviceName] = &ServiceCluster{}
-			}
-
 			service := &Service{}
 			service.index = serviceIndex
 			service.nodeKey = serviceKey
-
-			if action == "delete" || action == "expire" {
-				w.config.RemoveEnv(serviceName, w.services)
-				return
-			}
 
 			for _, node := range response.Node.Nodes {
 				switch node.Key {
@@ -117,27 +107,29 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 					}
 				}
 				case lastAccessKey:
-					lastAccess := response.Node.Value
-					lastAccessTime, err := time.Parse(lastAccess, lastAccess)
+					lastAccess := node.Value
+					lastAccessTime, err := time.Parse(TIME_FORMAT, lastAccess)
 					if err != nil {
 						glog.Errorf("Error parsing last access date with service %s: %s", serviceName, err)
 						break
 					}
-					service.lastAccess = lastAccessTime
+					service.lastAccess = &lastAccessTime
 				}
 			}
 
 			parameter, _ := strconv.Atoi(w.config.passiveLimitDuration)
 			passiveLimitDuration := time.Duration(parameter) * time.Hour
 
-			if !time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.current == PASSIVATED_STATUS {
-				actualService := w.services[serviceName].Get(service.index)
-				if actualService != nil {
-					_, error := w.client.Set(statusKey+"/expected", STARTED_STATUS, 0)
-					if error == nil {
-						glog.Errorf("Setting expected status to started has failed for Service "+serviceName+": %s", err)
+
+			// Checking if the service should be re-activated or not
+			if service.lastAccess != nil && service.status != nil {
+				if !time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.expected == PASSIVATED_STATUS{
+					response, error := w.client.Set(statusKey+"/expected", STARTED_STATUS, 0)
+					if error != nil && response == nil {
+						glog.Errorf("Setting expected status to 'started' has failed for Service "+serviceName+": %s", err)
 					}
-					_, err := exec.Command("fleetctl", "start", serviceName).Output()
+					cmd := "fleetctl start " + serviceName
+					_, err := exec.Command("/bin/bash", "-c", cmd).Output()
 					if err != nil {
 						glog.Errorf("Service "+serviceName+" restart has failed: %s", err)
 						break

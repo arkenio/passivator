@@ -16,11 +16,11 @@ package main
 
 import (
 	"errors"
-	"flag"
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/golang/glog"
 	"strings"
 	"regexp"
+	"flag"
 )
 
 type Config struct {
@@ -49,10 +49,6 @@ func (c *Config) getServiceForNode(node *etcd.Node, config *Config) string {
 func (c *Config) getServiceIndexForNode(node *etcd.Node, config *Config) string {
 	r := regexp.MustCompile(config.servicePrefix + "/(.*)(/.*)*")
 	return strings.Split(r.FindStringSubmatch(node.Key)[1], "/")[1]
-}
-
-func (c *Config) RemoveEnv(serviceName string, services map[string]*ServiceCluster) {
-	delete(services, serviceName)
 }
 
 func parseConfig() *Config {

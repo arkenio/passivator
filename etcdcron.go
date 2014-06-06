@@ -25,15 +25,14 @@ import (
 type EtcdCron struct {
 	client   *etcd.Client
 	config   *Config
-	services map[string]*ServiceCluster
 }
 
-func NewEtcdCron(config *Config, services map[string]*ServiceCluster) (*EtcdCron, error) {
+func NewEtcdCron(config *Config) (*EtcdCron, error) {
 	client, err := config.getEtcdClient()
 	if err != nil {
 		return nil, err
 	}
-	return &EtcdCron{client, config, services}, nil
+	return &EtcdCron{client, config}, nil
 }
 
 func (etcdcron *EtcdCron) init() {
@@ -42,7 +41,7 @@ func (etcdcron *EtcdCron) init() {
 
 func (etcdcron *EtcdCron) start() {
 	cronDuration, _ := strconv.Atoi(etcdcron.config.cronDuration)
-	interval := time.Duration(cronDuration) * time.Minute
+	interval := time.Duration(cronDuration) * time.Second
 	ticker := time.NewTicker(interval)
 	for {
 		<-ticker.C
@@ -74,18 +73,9 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 
 		if err == nil {
 
-			if etcdcron.services[serviceName] == nil {
-				etcdcron.services[serviceName] = &ServiceCluster{}
-			}
-
 			service := &Service{}
 			service.index = serviceIndex
 			service.nodeKey = serviceKey
-
-			if action == "delete" || action == "expire" {
-				etcdcron.config.RemoveEnv(serviceName, etcdcron.services)
-				return
-			}
 
 			for _, node := range response.Node.Nodes {
 				switch node.Key {
@@ -102,31 +92,32 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 					}
 				}
 				case lastAccessKey:
-					lastAccess := response.Node.Value
-					lastAccessTime, err := time.Parse(lastAccess, lastAccess)
+					lastAccess := node.Value
+					lastAccessTime, err := time.Parse(TIME_FORMAT, lastAccess)
 					if err != nil {
 						glog.Errorf("Error parsing last access date with service %s: %s", serviceName, err)
 						break
 					}
-					service.lastAccess = lastAccessTime
+					service.lastAccess = &lastAccessTime
 				}
 			}
 
 			parameter, _ := strconv.Atoi(etcdcron.config.passiveLimitDuration)
 			passiveLimitDuration := time.Duration(parameter) * time.Hour
 
-			if time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.current == STARTED_STATUS {
-				actualService := etcdcron.services[serviceName].Get(service.index)
-				if actualService != nil {
-					_, error := etcdcron.client.Set(statusKey+"/current", PASSIVATED_STATUS, 0)
-					if error == nil {
-						glog.Errorf("Setting status current to passivated has failed for Service "+serviceName+": %s", err)
+			// Checking if the service should be passivated or not
+			if service.lastAccess != nil && service.status != nil {
+				if time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.current == STARTED_STATUS {
+					responseCurrent, error := etcdcron.client.Set(statusKey+"/current", PASSIVATED_STATUS, 0)
+					if error != nil && responseCurrent == nil {
+						glog.Errorf("Setting status current to 'passivated' has failed for Service "+serviceName+": %s", err)
 					}
 					response, error := etcdcron.client.Set(statusKey+"/expected", PASSIVATED_STATUS, 0)
-					if error == nil && response == nil {
-						glog.Errorf("Setting status expected to passivated has failed for Service "+serviceName+": %s", err)
+					if error != nil && response == nil {
+						glog.Errorf("Setting status expected to 'passivated' has failed for Service "+serviceName+": %s", err)
 					}
-					_, err := exec.Command("fleetctl", "stop", serviceName).Output()
+					cmd := "fleetctl stop " + serviceName
+					_, err := exec.Command("/bin/bash", "-c", cmd).Output()
 					if err != nil {
 						glog.Errorf("Service "+serviceName+" passivation has failed: %s", err)
 						break

@@ -28,28 +28,26 @@ type Service struct {
 	domain     string
 	name       string
 	status   *Status
-	lastAccess time.Time
+	lastAccess *time.Time
 }
 
 type EtcdResolver struct {
 	config          *Config
 	watcher         *watcher
-	services        map[string]*ServiceCluster
 	watchIndex      uint64
 	etcdcron        *EtcdCron
 }
 
 func NewEtcdResolver(config *Config) (*EtcdResolver, error) {
-	services := make(map[string]*ServiceCluster)
-	watcher, error := NewEtcdWatcher(config, services)
+	watcher, error := NewEtcdWatcher(config)
 	if error != nil {
 		return nil, error
 	}
-	etcdcron, error := NewEtcdCron(config, services)
+	etcdcron, error := NewEtcdCron(config)
 	if error != nil {
 		return nil, error
 	}
-	return &EtcdResolver{config, watcher, services, 0, etcdcron}, nil
+	return &EtcdResolver{config, watcher, 0, etcdcron}, nil
 }
 
 func (resolver *EtcdResolver) init() {
