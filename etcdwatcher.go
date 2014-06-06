@@ -19,9 +19,8 @@ import (
 	"github.com/golang/glog"
 	"time"
 	"os/exec"
+	"strconv"
 )
-
-const LIMIT_TIME time.Duration = 12 * time.Hour
 
 // A watcher loads and watch the etcd hierarchy for services.
 type watcher struct {
@@ -128,7 +127,10 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 				}
 			}
 
-			if !time.Now().After(service.lastAccess.Add(LIMIT_TIME)) && service.status.current == PASSIVATED_STATUS {
+			parameter, _ := strconv.Atoi(w.config.passiveLimitDuration)
+			passiveLimitDuration := time.Duration(parameter) * time.Hour
+
+			if !time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.current == PASSIVATED_STATUS {
 				actualService := w.services[serviceName].Get(service.index)
 				if actualService != nil {
 					_, error := w.client.Set(statusKey+"/expected", STARTED_STATUS, 0)

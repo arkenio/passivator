@@ -19,9 +19,8 @@ import (
 	"time"
 	"github.com/golang/glog"
 	"os/exec"
+	"strconv"
 )
-
-const INTERVAL_PERIOD time.Duration = 5 * time.Minute
 
 type EtcdCron struct {
 	client   *etcd.Client
@@ -42,7 +41,9 @@ func (etcdcron *EtcdCron) init() {
 }
 
 func (etcdcron *EtcdCron) start() {
-	ticker := time.NewTicker(INTERVAL_PERIOD)
+	cronDuration, _ := strconv.Atoi(etcdcron.config.cronDuration)
+	interval := time.Duration(cronDuration) * time.Minute
+	ticker := time.NewTicker(interval)
 	for {
 		<-ticker.C
 		// Check every 5 minutes all services lastAccess etcd date entry
@@ -52,7 +53,7 @@ func (etcdcron *EtcdCron) start() {
 				etcdcron.checkServiceAccess(serviceNode, response.Action)
 			}
 		}
-		ticker = time.NewTicker(INTERVAL_PERIOD)
+		ticker = time.NewTicker(interval)
 	}
 }
 
@@ -111,7 +112,10 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 				}
 			}
 
-			if time.Now().After(service.lastAccess.Add(LIMIT_TIME)) && service.status.current == STARTED_STATUS {
+			parameter, _ := strconv.Atoi(etcdcron.config.passiveLimitDuration)
+			passiveLimitDuration := time.Duration(parameter) * time.Hour
+
+			if time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.current == STARTED_STATUS {
 				actualService := etcdcron.services[serviceName].Get(service.index)
 				if actualService != nil {
 					_, error := etcdcron.client.Set(statusKey+"/current", PASSIVATED_STATUS, 0)
