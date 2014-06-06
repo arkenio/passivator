@@ -3,7 +3,7 @@
 Passivator
 ======
 
-The passivator process purpose is watching last access services dates submitted by [Gogeta](http://github.com/arkenio/gogeta)and starting/stopping those services depending on limit access duration (If no activity has been detected during 12 hours, service is passivated). The process will restart after first new activity detected.
+The passivator process purpose is watching last access services dates submitted by [Gogeta](http://github.com/arkenio/gogeta) and starting/stopping those services depending on limit access duration (If no activity has been detected during 12 hours, service is passivated). The process will restart after first new activity detected.
 
 It is part of the nuxeo.io infrastructure.
 
