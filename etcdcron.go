@@ -107,7 +107,7 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 
 			// Checking if the service should be passivated or not
 			if service.lastAccess != nil && service.status != nil {
-				if time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.current == STARTED_STATUS {
+				if etcdcron.hasToBePassivated(service,passiveLimitDuration) {
 					responseCurrent, error := etcdcron.client.Set(statusKey+"/current", PASSIVATED_STATUS, 0)
 					if error != nil && responseCurrent == nil {
 						glog.Errorf("Setting status current to 'passivated' has failed for Service "+serviceName+": %s", err)
@@ -127,4 +127,8 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 			}
 		}
 	}
+}
+
+func (etcdcron *EtcdCron) hasToBePassivated(service *Service, passiveLimitDuration time.Duration) bool{
+	return time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.current == STARTED_STATUS
 }

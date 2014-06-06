@@ -123,7 +123,7 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 
 			// Checking if the service should be re-activated or not
 			if service.lastAccess != nil && service.status != nil {
-				if !time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.expected == PASSIVATED_STATUS{
+				if w.hasToBeActivated(service, passiveLimitDuration) {
 					response, error := w.client.Set(statusKey+"/expected", STARTED_STATUS, 0)
 					if error != nil && response == nil {
 						glog.Errorf("Setting expected status to 'started' has failed for Service "+serviceName+": %s", err)
@@ -140,3 +140,8 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 		}
 	}
 }
+
+func (watcher *watcher) hasToBeActivated(service *Service, passiveLimitDuration time.Duration) bool {
+	return !time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.expected == PASSIVATED_STATUS
+}
+
