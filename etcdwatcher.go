@@ -50,7 +50,6 @@ func (w *watcher) loadAndWatch(etcdDir string, registerFunc func(*etcd.Node, str
 	updateChannel := make(chan *etcd.Response, 10)
 	go w.watch(updateChannel, registerFunc)
 	w.client.Watch(etcdDir, (uint64)(0), true, updateChannel, nil)
-	glog.Error("passer par la")
 }
 
 func (w *watcher) loadPrefix(etcDir string, registerFunc func(*etcd.Node, string)) {

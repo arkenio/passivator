@@ -7,4 +7,4 @@ RUN gom install
 RUN gom test
 
 EXPOSE 7777
-ENTRYPOINT ["passivator", "-etcdAddress", "http://172.17.42.1:4001", "-cronDuration", "5", "-passiveLimitDuration", "12"]
+ENTRYPOINT ["passivator", "-etcdAddress", "http://172.17.42.1:4001", "-cronDuration", "5", "-passiveLimitDuration", "12", "-alsologtostderr", "true"]
