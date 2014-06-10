@@ -34,6 +34,10 @@ Example:
                -cronDuration="5"
                -passiveLimitDuration="12"
 
+If you need to display Info logs this flag can be added:
+
+               -stderrthreshold=INFO
+
 
 Report & Contribute
 -------------------
