@@ -62,8 +62,8 @@ func parseConfig() *Config {
 	glog.Infof("Dumping Configuration")
 	glog.Infof("  servicesPrefix : %s", config.servicePrefix)
 	glog.Infof("  etcdAddress : %s", config.etcdAddress)
-	glog.Infof("  Passivation cron duration: %s", config.cronDuration)
-	glog.Infof("  Limit duration of passivation : %s", config.passiveLimitDuration)
+	glog.Infof("  Passivation check cron duration: %s", config.cronDuration)
+	glog.Infof("  Passivation time laps: %s", config.passiveLimitDuration)
 
 	return config
 }
