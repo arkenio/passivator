@@ -127,8 +127,7 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 					if error != nil && response == nil {
 						glog.Errorf("Setting expected status to 'started' has failed for Service "+serviceName+": %s", err)
 					}
-					cmd := "fleetctl start " + serviceName
-					_, err := exec.Command("/bin/bash", "-c", cmd).Output()
+					_, err := exec.Command("/bin/bash -c fleetctl start " + serviceName).Output()
 					if err != nil {
 						glog.Errorf("Service "+serviceName+" restart has failed: %s", err)
 						break
