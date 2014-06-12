@@ -28,7 +28,6 @@ type Config struct {
 	etcdAddress          string
 	cronDuration         string
 	passiveLimitDuration string
-	etcdEndPoint         string
 	client        *etcd.Client
 }
 
@@ -58,7 +57,6 @@ func parseConfig() *Config {
 	flag.StringVar(&config.etcdAddress, "etcdAddress", "http://127.0.0.1:4001/", "etcd client host")
 	flag.StringVar(&config.cronDuration, "cronDuration", "5", "Passivation cron checking duration ")
 	flag.StringVar(&config.passiveLimitDuration, "passiveLimitDuration", "12", "Limit duration of passivation")
-	flag.StringVar(&config.etcdEndPoint, "etcdEndPoint", "http://172.17.42.1:4001", "Etcd EndPoint")
 	flag.Parse()
 
 	glog.Infof("Dumping Configuration")
@@ -66,7 +64,6 @@ func parseConfig() *Config {
 	glog.Infof("  etcdAddress : %s", config.etcdAddress)
 	glog.Infof("  Passivation check cron duration: %s", config.cronDuration)
 	glog.Infof("  Passivation time laps: %s", config.passiveLimitDuration)
-	glog.Infof("  Etcd EndPoint: %s", config.etcdEndPoint)
 
 	return config
 }

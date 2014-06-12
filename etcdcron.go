@@ -118,7 +118,7 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 					if error != nil && response == nil {
 						glog.Errorf("Setting status expected to 'passivated' has failed for Service "+service.name+": %s", err)
 					}
-					cmd := exec.Command("/usr/bin/fleetctl --endpoint=" + etcdcron.config.etcdEndPoint + " stop " + service.name)
+					cmd := exec.Command("/usr/bin/fleetctl --endpoint=" + etcdcron.config.etcdAddress + " stop " + service.name)
 					cmd.Stdin = os.Stdin
 					cmd.Stdout = os.Stdout
 					cmd.Stderr = os.Stderr

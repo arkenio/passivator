@@ -26,7 +26,6 @@ Several parameters allow to configure the way the passivator behaves :
  * `etcdAddress` specifies the address of the `etcd` server (default value: "http://172.17.42.1:4001")
  * `cronDuration` specifies the lap duration in minutes to check services to passivate (default value: "5")
  * `passiveLimitDuration` specifies the limit duration in hours when a service has to be passivated if no activity has been detected (default value: "12")
- * `etcdEndPoint` Etcd EndPoint (default value: "http://172.17.42.1:4001")
  
 Example:
  
@@ -34,7 +33,6 @@ Example:
                -serviceDir="/services" \
                -cronDuration="5"
                -passiveLimitDuration="12"
-               -etcdEndPoint="http://172.17.42.1:4001"
 
 If you need to display Info logs this flag can be added:
 
