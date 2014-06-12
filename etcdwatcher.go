@@ -129,7 +129,7 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 					if error != nil && response == nil {
 						glog.Errorf("Setting expected status to 'started' has failed for Service "+service.name+": %s", err)
 					}
-					cmd := exec.Command("/usr/bin/fleetctl --endpoint=" + w.config.etcdAddress + " start " + service.name)
+					cmd := exec.Command("/usr/bin/fleetctl","--endpoint=" + etcdcron.config.etcdAddress, "start", service.name)
 					cmd.Stdin = os.Stdin
 					cmd.Stdout = os.Stdout
 					cmd.Stderr = os.Stderr
