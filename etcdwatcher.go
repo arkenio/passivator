@@ -20,6 +20,7 @@ import (
 	"time"
 	"os/exec"
 	"strconv"
+	"os"
 )
 
 // A watcher loads and watch the etcd hierarchy for services.
@@ -127,7 +128,11 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 					if error != nil && response == nil {
 						glog.Errorf("Setting expected status to 'started' has failed for Service "+serviceName+": %s", err)
 					}
-					_, err := exec.Command("/bin/bash -c fleetctl start " + serviceName).Output()
+					cmd := exec.Command("fleetctl start "+ serviceName)
+					cmd.Stdin = os.Stdin
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+					err := cmd.Run()
 					if err != nil {
 						glog.Errorf("Service "+serviceName+" restart has failed: %s", err)
 						break

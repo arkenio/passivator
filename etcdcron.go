@@ -20,6 +20,7 @@ import (
 	"github.com/golang/glog"
 	"os/exec"
 	"strconv"
+	"os"
 )
 
 type EtcdCron struct {
@@ -116,7 +117,11 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 					if error != nil && response == nil {
 						glog.Errorf("Setting status expected to 'passivated' has failed for Service "+serviceName+": %s", err)
 					}
-					_, err := exec.Command("/bin/bash -c fleetctl stop "+ serviceName).Output()
+					cmd := exec.Command("fleetctl stop "+ serviceName)
+					cmd.Stdin = os.Stdin
+					cmd.Stdout = os.Stdout
+					cmd.Stderr = os.Stderr
+					err := cmd.Run()
 					if err != nil {
 						glog.Errorf("Service "+serviceName+" passivation has failed: %s", err)
 						break
