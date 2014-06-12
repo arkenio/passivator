@@ -17,7 +17,7 @@ _vendor
 _cgo_defun.c
 _cgo_gotypes.go
 _cgo_export.*
-gogeta
+passivator
 tmp
 _testmain.go
 
