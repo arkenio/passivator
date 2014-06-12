@@ -11,4 +11,4 @@ RUN tar -v -C /tmp -xzf fleet-v0.4.0-linux-amd64.tar.gz
 RUN cp /tmp/fleet-v0.4.0-linux-amd64/fleetctl /usr/bin/fleetctl
 
 EXPOSE 7777
-ENTRYPOINT ["passivator", "-etcdAddress", "http://172.17.42.1:4001", "-cronDuration", "5", "-passiveLimitDuration", "12", "-alsologtostderr", "true"]
+ENTRYPOINT ["passivator", "-etcdAddress", "http://172.17.42.1:4001", "-cronDuration", "5", "-passiveLimitDuration", "12","-etcdEndPoint", "http://172.17.42.1:4001", "-alsologtostderr", "true"]

@@ -91,6 +91,7 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 			service := &Service{}
 			service.index = serviceIndex
 			service.nodeKey = serviceKey
+			service.name = "nxio."+serviceName+"."+serviceIndex+".service"
 
 			for _, node := range response.Node.Nodes {
 				switch node.Key {
@@ -110,7 +111,7 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 					lastAccess := node.Value
 					lastAccessTime, err := time.Parse(TIME_FORMAT, lastAccess)
 					if err != nil {
-						glog.Errorf("Error parsing last access date with service %s: %s", serviceName, err)
+						glog.Errorf("Error parsing last access date with service %s: %s", service.name, err)
 						break
 					}
 					service.lastAccess = &lastAccessTime
@@ -126,18 +127,18 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 				if w.hasToBeActivated(service, passiveLimitDuration) {
 					response, error := w.client.Set(statusKey+"/expected", STARTED_STATUS, 0)
 					if error != nil && response == nil {
-						glog.Errorf("Setting expected status to 'started' has failed for Service "+serviceName+": %s", err)
+						glog.Errorf("Setting expected status to 'started' has failed for Service "+service.name+": %s", err)
 					}
-					cmd := exec.Command("/usr/bin/fleetctl start "+ serviceName)
+					cmd := exec.Command("/usr/bin/fleetctl --endpoint=" + w.config.etcdEndPoint + " start " + service.name)
 					cmd.Stdin = os.Stdin
 					cmd.Stdout = os.Stdout
 					cmd.Stderr = os.Stderr
 					err := cmd.Run()
 					if err != nil {
-						glog.Errorf("Service "+serviceName+" restart has failed: %s", err)
+						glog.Errorf("Service "+service.name+" restart has failed: %s", err)
 						break
 					}
-					glog.Infof("Service %s restarted", serviceName)
+					glog.Infof("Service %s restarted", service.name)
 				}
 			}
 		}

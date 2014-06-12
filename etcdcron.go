@@ -77,6 +77,7 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 			service := &Service{}
 			service.index = serviceIndex
 			service.nodeKey = serviceKey
+			service.name = "nxio."+serviceName+"."+serviceIndex+".service"
 
 			for _, node := range response.Node.Nodes {
 				switch node.Key {
@@ -96,7 +97,7 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 					lastAccess := node.Value
 					lastAccessTime, err := time.Parse(TIME_FORMAT, lastAccess)
 					if err != nil {
-						glog.Errorf("Error parsing last access date with service %s: %s", serviceName, err)
+						glog.Errorf("Error parsing last access date with service %s: %s", service.name, err)
 						break
 					}
 					service.lastAccess = &lastAccessTime
@@ -108,31 +109,31 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 
 			// Checking if the service should be passivated or not
 			if service.lastAccess != nil && service.status != nil {
-				if etcdcron.hasToBePassivated(service,passiveLimitDuration) {
+				if etcdcron.hasToBePassivated(service, passiveLimitDuration) {
 					responseCurrent, error := etcdcron.client.Set(statusKey+"/current", PASSIVATED_STATUS, 0)
 					if error != nil && responseCurrent == nil {
-						glog.Errorf("Setting status current to 'passivated' has failed for Service "+serviceName+": %s", err)
+						glog.Errorf("Setting status current to 'passivated' has failed for Service "+service.name+": %s", err)
 					}
 					response, error := etcdcron.client.Set(statusKey+"/expected", PASSIVATED_STATUS, 0)
 					if error != nil && response == nil {
-						glog.Errorf("Setting status expected to 'passivated' has failed for Service "+serviceName+": %s", err)
+						glog.Errorf("Setting status expected to 'passivated' has failed for Service "+service.name+": %s", err)
 					}
-					cmd := exec.Command("/usr/bin/fleetctl stop "+ serviceName)
+					cmd := exec.Command("/usr/bin/fleetctl --endpoint=" + etcdcron.config.etcdEndPoint + " stop " + service.name)
 					cmd.Stdin = os.Stdin
 					cmd.Stdout = os.Stdout
 					cmd.Stderr = os.Stderr
 					err := cmd.Run()
 					if err != nil {
-						glog.Errorf("Service "+serviceName+" passivation has failed: %s", err)
+						glog.Errorf("Service "+service.name+" passivation has failed: %s", err)
 						break
 					}
-					glog.Infof("Service %s passivated", serviceName)
+					glog.Infof("Service %s passivated", service.name)
 				}
 			}
 		}
 	}
 }
 
-func (etcdcron *EtcdCron) hasToBePassivated(service *Service, passiveLimitDuration time.Duration) bool{
+func (etcdcron *EtcdCron) hasToBePassivated(service *Service, passiveLimitDuration time.Duration) bool {
 	return time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.current == STARTED_STATUS
 }
