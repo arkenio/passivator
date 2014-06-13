@@ -31,14 +31,10 @@ func test_passivator(t *testing.T) {
 
 			Convey("When last access is recent and service passivated", func() {
 					service.status.expected = "passivated"
-					service.status.current = "passivated"
-					lastAccessTime, _ := time.Parse(TIME_FORMAT, time.Now().String())
-					service.lastAccess = &lastAccessTime
-					parameter, _ := strconv.Atoi(config.passiveLimitDuration)
-					passiveLimitDuration := time.Duration(parameter) * time.Hour
+					service.status.current = "stopped"
 
 					Convey("Then the service should be restarted", func() {
-							So(watcher.hasToBeActivated(service, passiveLimitDuration), ShouldEqual, true)
+							So(watcher.hasToBeActivated(service), ShouldEqual, true)
 						})
 
 				})
