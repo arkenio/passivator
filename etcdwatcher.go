@@ -19,7 +19,6 @@ import (
 	"github.com/golang/glog"
 	"time"
 	"os/exec"
-	"strconv"
 	"os"
 )
 
@@ -118,18 +117,10 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 				}
 			}
 
-			parameter, _ := strconv.Atoi(w.config.passiveLimitDuration)
-			passiveLimitDuration := time.Duration(parameter) * time.Hour
-
-
 			// Checking if the service should be re-activated or not
 			if service.lastAccess != nil && service.status != nil {
-				if w.hasToBeActivated(service, passiveLimitDuration) {
-					response, error := w.client.Set(statusKey+"/expected", STARTED_STATUS, 0)
-					if error != nil && response == nil {
-						glog.Errorf("Setting expected status to 'started' has failed for Service "+service.name+": %s", err)
-					}
-					cmd := exec.Command("/usr/bin/fleetctl","--endpoint=" + w.config.etcdAddress, "start", service.name)
+				if w.hasToBeActivated(service) {
+					cmd := exec.Command("/usr/bin/fleetctl", "--endpoint="+w.config.etcdAddress, "start", service.name)
 					cmd.Stdin = os.Stdin
 					cmd.Stdout = os.Stdout
 					cmd.Stderr = os.Stderr
@@ -145,7 +136,7 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 	}
 }
 
-func (watcher *watcher) hasToBeActivated(service *Service, passiveLimitDuration time.Duration) bool {
-	return !time.Now().After(service.lastAccess.Add(passiveLimitDuration)) && service.status.expected == PASSIVATED_STATUS
+func (watcher *watcher) hasToBeActivated(service *Service) bool {
+	return service.status.expected == STARTED_STATUS && service.status.current == STOPPED_STATUS
 }
 
