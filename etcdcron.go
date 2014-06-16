@@ -42,7 +42,7 @@ func (etcdcron *EtcdCron) init() {
 
 func (etcdcron *EtcdCron) start() {
 	cronDuration, _ := strconv.Atoi(etcdcron.config.cronDuration)
-	interval := time.Duration(cronDuration) * time.Second
+	interval := time.Duration(cronDuration) * time.Minute
 	ticker := time.NewTicker(interval)
 	for {
 		<-ticker.C
