@@ -105,7 +105,7 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 			}
 
 			parameter, _ := strconv.Atoi(etcdcron.config.passiveLimitDuration)
-			passiveLimitDuration := time.Duration(parameter) * time.Hour
+			passiveLimitDuration := time.Duration(parameter) * time.Minute
 
 			// Checking if the service should be passivated or not
 			if service.lastAccess != nil && service.status != nil {
