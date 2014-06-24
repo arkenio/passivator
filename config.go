@@ -56,7 +56,7 @@ func parseConfig() *Config {
 	flag.StringVar(&config.servicePrefix, "serviceDir", "/services", "etcd prefix to get services")
 	flag.StringVar(&config.etcdAddress, "etcdAddress", "http://127.0.0.1:4001/", "etcd client host")
 	flag.StringVar(&config.cronDuration, "cronDuration", "5", "Passivation cron checking duration in minute")
-	flag.StringVar(&config.passiveLimitDuration, "passiveLimitDuration", "15", "Limit duration of passivation in minute")
+	flag.StringVar(&config.passiveLimitDuration, "passiveLimitDuration", "12", "Limit duration of passivation in hour")
 	flag.Parse()
 
 	glog.Infof("Dumping Configuration")
