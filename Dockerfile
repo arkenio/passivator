@@ -1,8 +1,9 @@
-FROM       arken/gom-base
+FROM       arken/gom-base:0.1.0
 MAINTAINER Vladimir PASQUIER <vpasquier@nuxeo.com>
 
 RUN go get github.com/arkenio/passivator
 WORKDIR /usr/local/go/src/github.com/arkenio/passivator
+RUN git checkout v0.1.0
 RUN gom install
 RUN gom test
 
