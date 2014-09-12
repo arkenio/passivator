@@ -74,65 +74,70 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 	serviceName := w.config.getServiceForNode(node, w.config)
 
 	// Get service's root node instead of changed node.
-	serviceNode, _ := w.client.Get(w.config.servicePrefix+"/"+serviceName, true, true)
+	serviceNode, err := w.client.Get(w.config.servicePrefix+"/"+serviceName, true, true)
 
-	for _, indexNode := range serviceNode.Node.Nodes {
+	if (err == nil) {
 
-		serviceIndex := w.config.getServiceIndexForNode(indexNode, w.config)
-		serviceKey := w.config.servicePrefix + "/" + serviceName + "/" + serviceIndex
-		lastAccessKey := serviceKey + "/lastAccess"
-		statusKey := serviceKey + "/status"
+		for _, indexNode := range serviceNode.Node.Nodes {
 
-		response, err := w.client.Get(serviceKey, true, true)
+			serviceIndex := w.config.getServiceIndexForNode(indexNode, w.config)
+			serviceKey := w.config.servicePrefix + "/" + serviceName + "/" + serviceIndex
+			lastAccessKey := serviceKey + "/lastAccess"
+			statusKey := serviceKey + "/status"
 
-		if err == nil {
+			response, err := w.client.Get(serviceKey, true, true)
 
-			service := &Service{}
-			service.index = serviceIndex
-			service.nodeKey = serviceKey
-			service.name = "nxio."+serviceName+"."+serviceIndex+".service"
+			if err == nil {
 
-			for _, node := range response.Node.Nodes {
-				switch node.Key {
-				case statusKey:
-					service.status = &Status{}
-				for _, subNode := range node.Nodes {
-					switch subNode.Key {
-					case statusKey + "/alive":
-						service.status.alive = subNode.Value
-					case statusKey + "/current":
-						service.status.current = subNode.Value
-					case statusKey + "/expected":
-						service.status.expected = subNode.Value
+				service := &Service{}
+				service.index = serviceIndex
+				service.nodeKey = serviceKey
+				service.name = "nxio."+serviceName+"."+serviceIndex+".service"
+
+				for _, node := range response.Node.Nodes {
+					switch node.Key {
+					case statusKey:
+						service.status = &Status{}
+					for _, subNode := range node.Nodes {
+						switch subNode.Key {
+						case statusKey + "/alive":
+							service.status.alive = subNode.Value
+						case statusKey + "/current":
+							service.status.current = subNode.Value
+						case statusKey + "/expected":
+							service.status.expected = subNode.Value
+						}
+					}
+					case lastAccessKey:
+						lastAccess := node.Value
+						lastAccessTime, err := time.Parse(TIME_FORMAT, lastAccess)
+						if err != nil {
+							glog.Errorf("Error parsing last access date with service %s: %s", service.name, err)
+							break
+						}
+						service.lastAccess = &lastAccessTime
 					}
 				}
-				case lastAccessKey:
-					lastAccess := node.Value
-					lastAccessTime, err := time.Parse(TIME_FORMAT, lastAccess)
-					if err != nil {
-						glog.Errorf("Error parsing last access date with service %s: %s", service.name, err)
-						break
-					}
-					service.lastAccess = &lastAccessTime
-				}
-			}
 
-			// Checking if the service should be re-activated or not
-			if service.lastAccess != nil && service.status != nil {
-				if w.hasToBeActivated(service) {
-					cmd := exec.Command("/usr/bin/fleetctl", "--endpoint="+w.config.etcdAddress, "start", service.name)
-					cmd.Stdin = os.Stdin
-					cmd.Stdout = os.Stdout
-					cmd.Stderr = os.Stderr
-					err := cmd.Run()
-					if err != nil {
-						glog.Errorf("Service "+service.name+" restart has failed: %s", err)
-						break
+				// Checking if the service should be re-activated or not
+				if service.lastAccess != nil && service.status != nil {
+					if w.hasToBeActivated(service) {
+						cmd := exec.Command("/usr/bin/fleetctl", "--endpoint="+w.config.etcdAddress, "start", service.name)
+						cmd.Stdin = os.Stdin
+						cmd.Stdout = os.Stdout
+						cmd.Stderr = os.Stderr
+						err := cmd.Run()
+						if err != nil {
+							glog.Errorf("Service "+service.name+" restart has failed: %s", err)
+							break
+						}
+						glog.Infof("Service %s restarted", service.name)
 					}
-					glog.Infof("Service %s restarted", service.name)
 				}
 			}
 		}
+	} else {
+		glog.Errorf("Unable to get information for service %s from etcd",serviceName)
 	}
 }
 
