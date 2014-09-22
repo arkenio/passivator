@@ -3,7 +3,7 @@ MAINTAINER Vladimir PASQUIER <vpasquier@nuxeo.com>
 
 RUN go get github.com/arkenio/passivator
 WORKDIR /usr/local/go/src/github.com/arkenio/passivator
-RUN git checkout v0.1.0
+RUN git checkout v0.2.0
 RUN gom install
 RUN gom test
 
