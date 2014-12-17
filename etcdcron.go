@@ -73,7 +73,7 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 
 		response, err := etcdcron.client.Get(serviceKey, true, true)
 
-		if err == nil {
+		if err == nil && strings.Contains("nxio_", serviceName) {
 
 			service := &Service{}
 			service.index = serviceIndex

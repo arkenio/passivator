@@ -77,7 +77,7 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 	// Get service's root node instead of changed node.
 	serviceNode, err := w.client.Get(w.config.servicePrefix+"/"+serviceName, true, true)
 
-	if err == nil {
+	if err == nil && strings.Contains("nxio_", serviceName) {
 
 		for _, indexNode := range serviceNode.Node.Nodes {
 
