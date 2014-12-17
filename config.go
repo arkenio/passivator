@@ -26,15 +26,18 @@ import (
 type Config struct {
 	servicePrefix        string
 	etcdAddress          string
-	cronDuration         string
-	passiveLimitDuration string
+	cronDuration         int
+	passiveLimitDuration int
 	client               *etcd.Client
 }
 
 func (c *Config) getEtcdClient() (*etcd.Client, error) {
+	return c.getSyncEtcdClient(false)
+}
+func (c *Config) getSyncEtcdClient(sync bool) (*etcd.Client, error) {
 	if c.client == nil {
 		c.client = etcd.NewClient([]string{c.etcdAddress})
-		if !c.client.SyncCluster() {
+		if sync && !c.client.SyncCluster() {
 			return nil, errors.New("Unable to sync with etcd cluster, check your configuration or etcd status")
 		}
 	}
@@ -55,8 +58,8 @@ func parseConfig() *Config {
 	config := &Config{}
 	flag.StringVar(&config.servicePrefix, "serviceDir", "/services", "etcd prefix to get services")
 	flag.StringVar(&config.etcdAddress, "etcdAddress", "http://127.0.0.1:4001/", "etcd client host")
-	flag.StringVar(&config.cronDuration, "cronDuration", "5", "Passivation cron checking duration in minute")
-	flag.StringVar(&config.passiveLimitDuration, "passiveLimitDuration", "12", "Limit duration of passivation in hour")
+	flag.IntVar(&config.cronDuration, "cronDuration", 5, "Passivation cron checking duration in minute")
+	flag.IntVar(&config.passiveLimitDuration, "passiveLimitDuration", 12, "Limit duration of passivation in hour")
 	flag.Parse()
 
 	glog.Infof("Dumping Configuration")

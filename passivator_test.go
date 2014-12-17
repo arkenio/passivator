@@ -1,40 +1,46 @@
 package main
 
 import (
+	"github.com/arkenio/goarken"
 	. "github.com/smartystreets/goconvey/convey"
-	"strconv"
 	"testing"
 	"time"
 )
 
-func test_passivator(t *testing.T) {
-	var service *Service
-	var etcdcron *EtcdCron
-	var watcher *watcher
+func Test_passivator(t *testing.T) {
+	var service *goarken.Service
+
 	config := parseConfig()
+	var p *Passivator
+
+	var a *Activator
 
 	Convey("Given a last access and service status", t, func() {
+		service = &goarken.Service{}
+		status := &goarken.Status{Service: service}
+		service.Status = status
+		lastAccessTime, _ := time.Parse(goarken.TIME_FORMAT, "1984-02-29 15:00:00")
+		service.LastAccess = &lastAccessTime
+
+		p = &Passivator{Config: config}
+		a = &Activator{Config: config}
 
 		Convey("When last access is too old", func() {
-			service.status.expected = "started"
-			service.status.current = "started"
-			lastAccessTime, _ := time.Parse(TIME_FORMAT, "1984-02-29 15:00:00")
-			service.lastAccess = &lastAccessTime
-			parameter, _ := strconv.Atoi(config.passiveLimitDuration)
-			passiveLimitDuration := time.Duration(parameter) * time.Hour
+			service.Status.Expected = goarken.STARTED_STATUS
+			service.Status.Current = goarken.STARTED_STATUS
 
 			Convey("Then the service should be passivated", func() {
-				So(etcdcron.hasToBePassivated(service, passiveLimitDuration), ShouldEqual, true)
+				So(p.hasToBePassivated(service), ShouldEqual, true)
 			})
 
 		})
 
 		Convey("When last access is recent and service passivated", func() {
-			service.status.expected = "passivated"
-			service.status.current = "stopped"
+			service.Status.Expected = goarken.STARTED_STATUS
+			service.Status.Current = goarken.STOPPED_STATUS
 
 			Convey("Then the service should be restarted", func() {
-				So(watcher.hasToBeActivated(service), ShouldEqual, true)
+				So(a.hasToBeRestarted(service), ShouldEqual, true)
 			})
 
 		})

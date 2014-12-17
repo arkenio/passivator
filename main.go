@@ -15,6 +15,12 @@
 package main
 
 import "github.com/golang/glog"
+import (
+	"github.com/arkenio/goarken"
+	"os"
+	"os/signal"
+	"syscall"
+)
 
 const (
 	progName = "Passivator"
@@ -25,8 +31,32 @@ func main() {
 
 	config := parseConfig()
 
-	resolver, err := NewEtcdResolver(config)
-	if err == nil {
-		resolver.init()
+	domains := make(map[string]*goarken.Domain)
+	services := make(map[string]*goarken.ServiceCluster)
+
+	client, err := config.getEtcdClient()
+
+	if err != nil {
+		panic(err)
 	}
+
+	w := &goarken.Watcher{
+		Client:        client,
+		DomainPrefix:  "/domains",
+		ServicePrefix: "/services",
+		Domains:       domains,
+		Services:      services,
+	}
+
+	stop := goarken.NewBroadcaster()
+
+	go NewPassivator(w, config, stop.Listen()).run()
+	go NewActivator(w, config, stop.Listen()).run()
+
+	// Handle SIGINT and SIGTERM.
+	ch := make(chan os.Signal)
+	signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
+	glog.Info(<-ch)
+	stop.Write(struct{}{})
+
 }
