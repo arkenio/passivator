@@ -19,6 +19,7 @@ import (
 	"github.com/golang/glog"
 	"os"
 	"os/exec"
+	"strings"
 	"time"
 )
 
@@ -92,7 +93,7 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 				service := &Service{}
 				service.index = serviceIndex
 				service.nodeKey = serviceKey
-				service.name = "nxio." + serviceName + "." + serviceIndex + ".service"
+				service.name = "nxio@" + strings.Split(serviceName, "_")[1] + ".service"
 
 				for _, node := range response.Node.Nodes {
 					switch node.Key {
