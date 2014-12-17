@@ -17,15 +17,15 @@ package main
 import (
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/golang/glog"
-	"time"
-	"os/exec"
 	"os"
+	"os/exec"
+	"time"
 )
 
 // A watcher loads and watch the etcd hierarchy for services.
 type watcher struct {
-	client   *etcd.Client
-	config   *Config
+	client *etcd.Client
+	config *Config
 }
 
 // Constructor for a new watcher
@@ -76,7 +76,7 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 	// Get service's root node instead of changed node.
 	serviceNode, err := w.client.Get(w.config.servicePrefix+"/"+serviceName, true, true)
 
-	if (err == nil) {
+	if err == nil {
 
 		for _, indexNode := range serviceNode.Node.Nodes {
 
@@ -92,22 +92,22 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 				service := &Service{}
 				service.index = serviceIndex
 				service.nodeKey = serviceKey
-				service.name = "nxio."+serviceName+"."+serviceIndex+".service"
+				service.name = "nxio." + serviceName + "." + serviceIndex + ".service"
 
 				for _, node := range response.Node.Nodes {
 					switch node.Key {
 					case statusKey:
 						service.status = &Status{}
-					for _, subNode := range node.Nodes {
-						switch subNode.Key {
-						case statusKey + "/alive":
-							service.status.alive = subNode.Value
-						case statusKey + "/current":
-							service.status.current = subNode.Value
-						case statusKey + "/expected":
-							service.status.expected = subNode.Value
+						for _, subNode := range node.Nodes {
+							switch subNode.Key {
+							case statusKey + "/alive":
+								service.status.alive = subNode.Value
+							case statusKey + "/current":
+								service.status.current = subNode.Value
+							case statusKey + "/expected":
+								service.status.expected = subNode.Value
+							}
 						}
-					}
 					case lastAccessKey:
 						lastAccess := node.Value
 						lastAccessTime, err := time.Parse(TIME_FORMAT, lastAccess)
@@ -137,11 +137,10 @@ func (w *watcher) checkServiceAccess(node *etcd.Node, action string) {
 			}
 		}
 	} else {
-		glog.Errorf("Unable to get information for service %s from etcd",serviceName)
+		glog.Errorf("Unable to get information for service %s from etcd", serviceName)
 	}
 }
 
 func (watcher *watcher) hasToBeActivated(service *Service) bool {
 	return service.status.expected == STARTED_STATUS && service.status.current == STOPPED_STATUS
 }
-

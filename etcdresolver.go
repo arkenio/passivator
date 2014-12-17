@@ -27,15 +27,15 @@ type Service struct {
 	nodeKey    string
 	domain     string
 	name       string
-	status   *Status
+	status     *Status
 	lastAccess *time.Time
 }
 
 type EtcdResolver struct {
-	config          *Config
-	watcher         *watcher
-	watchIndex      uint64
-	etcdcron        *EtcdCron
+	config     *Config
+	watcher    *watcher
+	watchIndex uint64
+	etcdcron   *EtcdCron
 }
 
 func NewEtcdResolver(config *Config) (*EtcdResolver, error) {

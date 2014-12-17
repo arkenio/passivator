@@ -15,13 +15,13 @@
 package main
 
 const (
-STARTING_STATUS      = "starting"
-STARTED_STATUS       = "started"
-STOPPING_STATUS      = "stopping"
-STOPPED_STATUS       = "stopped"
-ERROR_STATUS         = "error"
-NA_STATUS            = "n/a"
-PASSIVATED_STATUS    = "passivated"
+	STARTING_STATUS   = "starting"
+	STARTED_STATUS    = "started"
+	STOPPING_STATUS   = "stopping"
+	STOPPED_STATUS    = "stopped"
+	ERROR_STATUS      = "error"
+	NA_STATUS         = "n/a"
+	PASSIVATED_STATUS = "passivated"
 )
 
 type Status struct {

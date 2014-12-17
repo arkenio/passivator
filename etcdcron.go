@@ -16,16 +16,17 @@ package main
 
 import (
 	"github.com/coreos/go-etcd/etcd"
-	"time"
 	"github.com/golang/glog"
+	"os"
 	"os/exec"
 	"strconv"
-	"os"
+	"strings"
+	"time"
 )
 
 type EtcdCron struct {
-	client   *etcd.Client
-	config   *Config
+	client *etcd.Client
+	config *Config
 }
 
 func NewEtcdCron(config *Config) (*EtcdCron, error) {
@@ -84,16 +85,16 @@ func (etcdcron *EtcdCron) checkServiceAccess(node *etcd.Node, action string) {
 				switch node.Key {
 				case statusKey:
 					service.status = &Status{}
-				for _, subNode := range node.Nodes {
-					switch subNode.Key {
-					case statusKey + "/alive":
-						service.status.alive = subNode.Value
-					case statusKey + "/current":
-						service.status.current = subNode.Value
-					case statusKey + "/expected":
-						service.status.expected = subNode.Value
+					for _, subNode := range node.Nodes {
+						switch subNode.Key {
+						case statusKey + "/alive":
+							service.status.alive = subNode.Value
+						case statusKey + "/current":
+							service.status.current = subNode.Value
+						case statusKey + "/expected":
+							service.status.expected = subNode.Value
+						}
 					}
-				}
 				case lastAccessKey:
 					lastAccess := node.Value
 					lastAccessTime, err := time.Parse(TIME_FORMAT, lastAccess)

@@ -16,11 +16,11 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"github.com/coreos/go-etcd/etcd"
 	"github.com/golang/glog"
-	"strings"
 	"regexp"
-	"flag"
+	"strings"
 )
 
 type Config struct {
@@ -28,7 +28,7 @@ type Config struct {
 	etcdAddress          string
 	cronDuration         string
 	passiveLimitDuration string
-	client        *etcd.Client
+	client               *etcd.Client
 }
 
 func (c *Config) getEtcdClient() (*etcd.Client, error) {
@@ -67,4 +67,3 @@ func parseConfig() *Config {
 
 	return config
 }
-
