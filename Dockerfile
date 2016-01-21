@@ -1,4 +1,4 @@
-FROM       arken/gom-base:0.1.0
+FROM       arken/gom-base
 MAINTAINER Vladimir PASQUIER <vpasquier@nuxeo.com>
 
 RUN go get github.com/arkenio/passivator
